@@ -1,4 +1,5 @@
 #pragma once
+#include <iostream>   // Output and Debugging 
 #include <Windows.h>  // Needed for memory allocation 
 #include <stdint.h>   // Usefull Types - Type Handling
 #include <stdlib.h>   // Standard Library - Self Explanitory 
@@ -16,8 +17,8 @@ public:
 	uint32_t activeMaxThreads = 0; //Maximum number of reader threads to spawn. This is for large files This defaults to 100% avaible CPU threads. 
 	uint64_t activeMemUse = 0;     //Active Maximum Memory to use. This defaults to 100% of available phys. 
 	uint64_t fileLines = 0;        //Number of lines in a file to read. 
-	char* csvData;                 //This is the array with the CSV data 
-//Public Access Function List
+	char* csvData;                 //This is the array with the CSV data
+	//Public Access Function List
 public:
 	CsvReader(void);
 	uint8_t setActiveFile(std::string path);    //Sets the Active File to be Processes 
@@ -29,7 +30,8 @@ public:
 private:
 	bool cur_active = FALSE;        //Is there a current active file being worked on
 	fs::path curPath;               //The current Active File Path
-	HANDLE curCsvFile;              //The cuttent csv FileCreateHandle 
+	HANDLE curCsvFile;              //The cuttent csv FileCreateHandle
+	HANDLE curCsvMapFile;           // handle for the file's memory-mapped region
 	uint64_t curFileSize = 0;       //Current Number of Bytes of the Target File.
 	uint64_t curTotalPages = 0;     //This is the total number of pages needed to read a filew 
 	uint64_t curPageSize = 0;       //Current Block Size: A block is the largest chunk of a file to be split into threads for reading;  
@@ -37,7 +39,7 @@ private:
 	uint64_t curChunksPerPageRm = 0;//This it the remainder of chunks per page
 	uint64_t curStartSplitSize = 0; //This is the Size of the Split Chunks 
 	uint64_t curSysGranularity = 0; //This is the Current Granularity of Pages on the HDD, Used for file Mapping Support
-//Configuration Profile Overrides;
+	//Configuration Profile Overrides;
 public:
 	uint64_t f_max_threads = 0;  //Override Maximum Threads, This Number MAY NOT EXCEED maxThreads
 	uint64_t f_max_memory = 0;   //Override Maximum Memory Usage, (!!!WARNING!!! VERY DANGEROUS)
