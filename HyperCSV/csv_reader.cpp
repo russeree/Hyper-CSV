@@ -72,17 +72,21 @@ uint8_t CsvReader::memMapFile(void) {
 		NULL
 	);
 	if (this->curCsvFile == INVALID_HANDLE_VALUE) { return 1; } //Fail if the file handler creation has failed./
-	//Memory Allocation Phase 
-	csvMemAlocation();
-	HANDLE csvFileMapping = CreateFileMappingA(this->curCsvFile, NULL, PAGE_READONLY, 0, 0, NULL);
-	MapViewOfFileEx(csvFileMapping, FILE_MAP_READ, 0, 0, 0, NULL);
-	CloseHandle(this->curCsvFile);
+	//Memory Allocation Phase -Alocate the Memory Requied for the Page Being Read 
+	csvMemAlocation(); 
 	return 0;
 }
 
 /**
- * @desc: This is the actual read thread to the memory mapped file.
- **/
+ * @req: Run as a seperate thread. 
+ * @desc: This is the actual read thread to the memory mapped file. 
+ **/ 
+uint8_t CsvReader::memMapCopyThread(void){
+	HANDLE csvFileMapping = CreateFileMappingA(this->curCsvFile, NULL, PAGE_READONLY, 0, 0, NULL);
+	MapViewOfFileEx(csvFileMapping, FILE_MAP_READ, 0, 0, 0, NULL);
+	return 0;
+}
+
 
  /**
   * @desc: Calculates and Alocates the Memory neccesary to parse the CSV files
