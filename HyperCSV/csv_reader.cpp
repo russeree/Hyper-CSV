@@ -96,13 +96,13 @@ uint8_t CsvReader::memMapFile(void) {
  **/ 
 uint8_t CsvReader::memMapCopyThread(void){
 	LPVOID lpMapAddress;
-	DWORD dwFileMapStart= (100000 / this->curSysGranularity) * this->curSysGranularity;
+	DWORD dwFileMapStart= (270000 / this->curSysGranularity) * this->curSysGranularity;
 	// Now Map the View and Test the Results
 	lpMapAddress = MapViewOfFile(
 		this->curCsvMapFile,  // handle to mapping object
 		FILE_MAP_READ,        // read/write
 		0,                    // high-order 32 bits of file offset
-		0,                    // low-order 32 bits of file offset
+		dwFileMapStart,       // low-order 32 bits of file offset
 		100000                // number of bytes to map
 	);
 	if (lpMapAddress == NULL){ return 1; }
@@ -121,4 +121,11 @@ uint8_t CsvReader::memMapCopyThread(void){
 uint8_t CsvReader::csvMemAlocation(void) {
 	this->csvData = (char*)malloc(this->curPageSize);
 	return 0;
+}
+
+/**
+ * @desc: This is the 
+ **/
+uint8_t CsvReader::calcOffsetsPerThread(void){
+	return 0; 
 }
