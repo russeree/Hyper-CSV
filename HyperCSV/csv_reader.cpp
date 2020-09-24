@@ -16,7 +16,7 @@
 	this->activeMemUse = statex.ullAvailPhys;
 }
 
-/* Sets up the Parser with and active file*/
+/* Sets up the Parser with and active file */
 uint8_t CsvReader::setActiveFile(std::string path) {
 	this->curPath = fs::u8path(path); //Create the path object for the target 
 	if (!fs::exists(this->curPath)) {
@@ -124,7 +124,8 @@ uint8_t CsvReader::csvMemAlocation(void) {
 }
 
 /**
- * @desc: This is the 
+ * @desc: This is the function to calculate the number of chunks(based on system granularity to grab per thread) this returns a vector with the offsets and sizes for the entire file
+ * this function also serves to ensure that the generation of chunks is safe and legal compared to a user defined function within the scope of the thread worker. 
  **/
 uint8_t CsvReader::calcOffsetsPerThread(void){
 	return 0; 

@@ -13,6 +13,14 @@
 
 namespace fs = std::filesystem;
 
+typedef struct FileOffeset{
+	uint64_t block_number;  // The block number in logical order 
+	uint64_t address_start; // Start Address
+	uint64_t address_end;   // End Address
+	uint8_t  error;         // Threaded Error 
+	bool processed;         // Processed 
+} FileOffset;
+
 class CsvReader {
 /* Reader Configuration Options */
 public:
@@ -20,7 +28,7 @@ public:
 	uint64_t activeMemUse = 0;                  // Active Maximum Memory to use. This defaults to 100% of available phys. 
 	uint64_t fileLines = 0;                     // Number of lines in a file to read. 
 	char* csvData;                              // This is the array with the CSV data
-	std::vector<uint64_t> readOffsets;          // This is the list of read offsets to be queued from the reader. This is affected by system granularity 
+	std::vector<FileOffset> readOffsets;          // This is the list of read offsets to be queued from the reader. This is affected by system granularity 
 /* Public Access Function List */
 public:
 	CsvReader(void);
