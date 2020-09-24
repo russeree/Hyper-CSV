@@ -126,7 +126,13 @@ uint8_t CsvReader::csvMemAlocation(void) {
 /**
  * @desc: This is the function to calculate the number of chunks(based on system granularity to grab per thread) this returns a vector with the offsets and sizes for the entire file
  * this function also serves to ensure that the generation of chunks is safe and legal compared to a user defined function within the scope of the thread worker. 
+ * @note: This function should be a part of the pre-processing loop. 
  **/
 uint8_t CsvReader::calcOffsetsPerThread(void){
+	uint64_t currentViewWindow= 0; //Init the starting windows @ 0
+	/* Get the Block Size in Number of Blocks to Read - MATH*/
+	while (currentViewWindow < this->curFileSize) {
+		FileOffset fileViewParams;
+	}
 	return 0; 
 }
