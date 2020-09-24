@@ -5,6 +5,7 @@
 #include "csv_reader.h"
 
 int main(){
-    CsvReader csv;
+    CsvReader CSV;
+    CSV.setActiveFile("500000 Sales Records.csv");
     std::cout << "Russeree Ultimate CSV Reader!\n";
 }
