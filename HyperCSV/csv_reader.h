@@ -1,9 +1,8 @@
 #pragma once
-
-#include <stdint.h>   // Usefull Types - Type Handling
 #include <iostream>   // Output and Debugging 
 #include <vector>     // This is used for threaded variables - such as the pointer to the memory views 
 #include <Windows.h>  // Needed for memory allocation 
+#include <stdint.h>   // Usefull Types - Type Handling
 #include <stdlib.h>   // Standard Library - Self Explanitory 
 #include <filesystem> // File System - Used for File Information and Pre-Processing Validation
 #include <thread>     // Threading Tools - Used for Threaded CSV Parsing Operations
@@ -13,14 +12,6 @@
 
 namespace fs = std::filesystem;
 
-typedef struct FileOffeset{
-	uint64_t block_number;  // The block number in logical order 
-	uint64_t address_start; // Start Address
-	uint64_t address_end;   // End Address
-	uint8_t  error;         // Threaded Error 
-	bool processed;         // Processed 
-} FileOffset;
-
 class CsvReader {
 /* Reader Configuration Options */
 public:
@@ -28,7 +19,6 @@ public:
 	uint64_t activeMemUse = 0;                  // Active Maximum Memory to use. This defaults to 100% of available phys. 
 	uint64_t fileLines = 0;                     // Number of lines in a file to read. 
 	char* csvData;                              // This is the array with the CSV data
-	std::vector<FileOffset> readOffsets;        // This is the list of read offsets to be queued from the reader. This is affected by system granularity 
 /* Public Access Function List */
 public:
 	CsvReader(void);
@@ -38,9 +28,8 @@ public:
 	uint8_t csvMemAlocation(void);              //Alocates the memory needed to stoe the CSV contents during parsing
 	uint8_t memMapFile(void);                   //Map the Active File into Memory for the Big Read - USE ONLY WITH SSD - No Parameters Needed
 	uint8_t memMapCopyThread(void);             //This is the thread that is spanwed to copy the file into memory for processing 
-	uint8_t calcOffsetsPerThread(void);         //This calculates the offsets needed to read a file from threads
 private:
-	fs::path curPath;                           //The current Active File Path
+	fs::path curPath;                           //The current Active File Path - This is used for the <filesystem> library
 	HANDLE curCsvFile;                          //The cuttent csv FileCreateHandle
 	HANDLE curCsvMapFile;                       // handle for the file's memory-mapped region
 	bool cur_active = FALSE;                    //Is there a current active file being worked on

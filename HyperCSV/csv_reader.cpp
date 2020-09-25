@@ -112,6 +112,7 @@ uint8_t CsvReader::memMapCopyThread(void){
 	// to char" to a "pointer to int" to get the whole thing
 	char iData;
 	iData = *(int*)pData;
+	calcOffsetsPerThread();
 	return 0;
 }
 
@@ -129,10 +130,9 @@ uint8_t CsvReader::csvMemAlocation(void) {
  * @note: This function should be a part of the pre-processing loop. 
  **/
 uint8_t CsvReader::calcOffsetsPerThread(void){
-	uint64_t currentViewWindow= 0; //Init the starting windows @ 0
+	uint64_t currentViewWindow = 0; //Init the starting windows @ 0
+	uint64_t totalBlocks = 0; //This is the total number of chunks needed to process an entire file
 	/* Get the Block Size in Number of Blocks to Read - MATH*/
-	while (currentViewWindow < this->curFileSize) {
-		FileOffset fileViewParams;
-	}
+	totalBlocks = ceil((double)this->curFileSize / (double)this->curSysGranularity);
 	return 0; 
 }
