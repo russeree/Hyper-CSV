@@ -33,7 +33,7 @@ uint8_t CsvReader::setActiveFile(std::string path) {
 /* Sets a max memory override based on a percentage of available memory: consumes a float < 100 */
 uint8_t CsvReader::setMaxMemoryPercent(float percent) {
 	if (0 < percent && percent < 100) { //Check to make sure the users float percent is within a valid range of percents 
-		this->f_max_memory = floor((double)this->activeMemUse * (double)percent);
+		this->f_max_memory = (uint64_t)floor((double)this->activeMemUse * (double)percent);
 	}
 	else{
 		return 1; //Failed due to impossible bounding issues
@@ -130,9 +130,17 @@ uint8_t CsvReader::csvMemAlocation(void) {
  * @note: This function should be a part of the pre-processing loop. 
  **/
 uint8_t CsvReader::calcOffsetsPerThread(void){
-	uint64_t currentViewWindow = 0; //Init the starting windows @ 0
-	uint64_t totalBlocks = 0; //This is the total number of chunks needed to process an entire file
-	/* Get the Block Size in Number of Blocks to Read - MATH*/
-	totalBlocks = ceil((double)this->curFileSize / (double)this->curSysGranularity);
+	uint64_t currentViewWindow = 0;   //Init the starting windows @ 0
+	uint64_t totalBlocks = 0;         //This is the total number of chunks needed to process an entire file
+	uint64_t totalBlocksInMemory = 0; //This is the total number of blocks that can be placed into the alocated memory
+	uint64_t totalPagesNeeded = 0;    //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
+	/* Get the Block Size in Number of Blocks to Read - MATH Total*/
+	totalBlocks = (uint32_t)ceil((double)this->curFileSize / (double)this->curSysGranularity); //Always add +1 block to the end unless it divides perfectly
+	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity); //Calculate the number of blocks that will fit in the active available memory space
+	totalPagesNeeded = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory); //Calc the total number of times the active memory work area would be filled up completely
+	/* Thead Level Calculations for memory Access - This is the process of stitching the file together */
+	if (totalPagesNeeded <= 1) { //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
+		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
+	}
 	return 0; 
 }
