@@ -132,8 +132,7 @@ uint8_t CsvReader::csvMemAlocation(void) {
 uint8_t CsvReader::calcOffsetsPerThread(void){
 	uint64_t currentViewWindow = 0; //Init the starting windows @ 0
 	uint64_t totalBlocks = 0; //This is the total number of chunks needed to process an entire file
-	/* Get the Block Size in Number of Blocks to Read - MATH -*/
+	/* Get the Block Size in Number of Blocks to Read - MATH*/
 	totalBlocks = ceil((double)this->curFileSize / (double)this->curSysGranularity);
-
 	return 0; 
 }
