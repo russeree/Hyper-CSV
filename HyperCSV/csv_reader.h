@@ -1,8 +1,9 @@
 #pragma once
+
+#include <stdint.h>   // Usefull Types - Type Handling
 #include <iostream>   // Output and Debugging 
 #include <vector>     // This is used for threaded variables - such as the pointer to the memory views 
 #include <Windows.h>  // Needed for memory allocation 
-#include <stdint.h>   // Usefull Types - Type Handling
 #include <stdlib.h>   // Standard Library - Self Explanitory 
 #include <filesystem> // File System - Used for File Information and Pre-Processing Validation
 #include <thread>     // Threading Tools - Used for Threaded CSV Parsing Operations
@@ -12,13 +13,22 @@
 
 namespace fs = std::filesystem;
 
+typedef struct FileOffeset {
+	uint64_t block_number;  // The block number in logical order 
+	uint64_t address_start; // Start Address
+	uint64_t address_end;   // End Address
+	uint8_t  error;         // Threaded Error 
+	bool processed;         // Processed 
+} FileOffset;
+
 class CsvReader {
-/* Reader Configuration Options */
+	/* Reader Configuration Options */
 public:
 	uint32_t activeMaxThreads = 0;              // Maximum number of reader threads to spawn. This is for large files This defaults to 100% avaible CPU threads. 
 	uint64_t activeMemUse = 0;                  // Active Maximum Memory to use. This defaults to 100% of available phys. 
 	uint64_t fileLines = 0;                     // Number of lines in a file to read. 
 	char* csvData;                              // This is the array with the CSV data
+	std::vector<FileOffset> readOffsets;          // This is the list of read offsets to be queued from the reader. This is affected by system granularity 
 /* Public Access Function List */
 public:
 	CsvReader(void);
@@ -28,8 +38,9 @@ public:
 	uint8_t csvMemAlocation(void);              //Alocates the memory needed to stoe the CSV contents during parsing
 	uint8_t memMapFile(void);                   //Map the Active File into Memory for the Big Read - USE ONLY WITH SSD - No Parameters Needed
 	uint8_t memMapCopyThread(void);             //This is the thread that is spanwed to copy the file into memory for processing 
+	uint8_t calcOffsetsPerThread(void);         //This calculates the offsets needed to read a file from threads
 private:
-	fs::path curPath;                           //The current Active File Path - This is used for the <filesystem> library
+	fs::path curPath;                           //The current Active File Path
 	HANDLE curCsvFile;                          //The cuttent csv FileCreateHandle
 	HANDLE curCsvMapFile;                       // handle for the file's memory-mapped region
 	bool cur_active = FALSE;                    //Is there a current active file being worked on
@@ -40,7 +51,7 @@ private:
 	uint64_t curChunksPerPageRm = 0;            //This it the remainder of chunks per page
 	uint64_t curStartSplitSize = 0;             //This is the Size of the Split Chunks 
 	uint64_t curSysGranularity = 0;             //This is the Current Granularity of Pages on the HDD, Used for file Mapping Support
-/* Configuration Profile Overrides */;
+	/* Configuration Profile Overrides */;
 public:
 	uint64_t f_max_threads = 0;                 //Override Maximum Threads, This Number MAY NOT EXCEED maxThreads
 	uint64_t f_max_memory = 0;                  //Override Maximum Memory Usage, (!!!WARNING!!! VERY DANGEROUS)
