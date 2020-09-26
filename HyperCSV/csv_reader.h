@@ -15,9 +15,8 @@ namespace fs = std::filesystem;
 
 typedef struct FileOffeset {
 	uint64_t block_number;  // The block number in logical order 
-	uint64_t address_start; // Start Address
-	uint64_t address_end;   // End Address
-	uint64_t clipping;      // Does the block contained a clipped amount of data at the end: 0 = No, any other value represents an amount of to read within the last block that is part of the actual file 
+	DWORD    address_start; // Start Address
+	uint64_t bytesToMap;    // End Address
 	uint8_t  error;         // Threaded Error 
 	bool processed;         // Processed 
 } FileOffset;

@@ -72,7 +72,7 @@ uint8_t CsvReader::memMapFile(void) {
 		FILE_ATTRIBUTE_NORMAL,
 		NULL
 	);
-	if (this->curCsvFile == INVALID_HANDLE_VALUE) {return 1;} //Fail if the file handler creation has failed./
+	if (this->curCsvFile == INVALID_HANDLE_VALUE){return 1;} //Fail if the file handler creation has failed./
 	// Create the File Mapping Objects
 	this->curCsvMapFile = CreateFileMappingA(
 		this->curCsvFile,    // current file handle
@@ -137,21 +137,27 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 	uint64_t lastBlockClipping = 0;   //This is the total number of bytes left over in the last block, if the file is shorter than the total number of blocks when viewed as bytes 
 	/* Get the Block Size in Number of Blocks to Read - MATH Total*/
 	totalBlocks         = (uint64_t)ceil((double)this->curFileSize / (double)this->curSysGranularity);           //Always add +1 block to the end unless it divides perfectly
-	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity); //Calc the number of blocks that will fit in the active available memory space
-	totalPagesNeeded    = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory);                //Calc the total number of times the active memory work area would be filled up completely
-	lastBlockClipping   = (uint64_t)ceil(this->curFileSize % this->curSysGranularity);                     //Calc the number of bytes to read in the final block
+	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity);         //Calc the number of blocks that will fit in the active available memory space
+	totalPagesNeeded    = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory);                     //Calc the total number of times the active memory work area would be filled up completely
+	lastBlockClipping   = (uint64_t)ceil(this->curFileSize % this->curSysGranularity);                           //Calc the number of bytes to read in the final block
 	/* Thead Level Calculations for memory Access - This is the process of stitching the file together */
-	if (totalPagesNeeded <= 1) { //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
+	if (totalPagesNeeded <= 1) {                                                                                 //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
 		uint64_t q = (uint64_t)((uint64_t)totalBlocks / (uint64_t)this->activeMaxThreads);
 		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads); 
 		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
-		for (int thread = 0; thread < this->activeMaxThreads; thread++){ 
-			FileOffeset threadWork;
+		for (int thread = 0; thread < this->activeMaxThreads; thread++){ //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
+			FileOffeset threadWork;           //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
+			DWORD dwFileMapStart;             //This is the data window to where the file mapping will start
 			threadWork.block_number = thread; //Block Number is assigned to the current thread
 			threadWork.processed = FALSE;     //These Blocks have not been processed yet, just generated
 			threadWork.error = 0;             //0 means there were no errors processing the CSV data -> This will get modified by the worker thread. 
-			/* This is the important part and that is getting the correct offsets for each thread */
+			threadWork.address_start  = (thread * q) * this->curSysGranularity;
+			threadWork.bytesToMap = q * this->curSysGranularity;
+			if (thread == (this->activeMaxThreads - 1)){
+				threadWork.bytesToMap += r * this->curSysGranularity; //Just make sure to add in the remaining bytes for the last thread worker. 
+			}
+			this->readOffsets.push_back(threadWork); //Added your payload to the final vector!
 		}
 		return 1; 
 	}
