@@ -134,13 +134,26 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 	uint64_t totalBlocks = 0;         //This is the total number of chunks needed to process an entire file
 	uint64_t totalBlocksInMemory = 0; //This is the total number of blocks that can be placed into the alocated memory
 	uint64_t totalPagesNeeded = 0;    //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
+	uint64_t lastBlockClipping = 0;   //This is the total number of bytes left over in the last block, if the file is shorter than the total number of blocks when viewed as bytes 
 	/* Get the Block Size in Number of Blocks to Read - MATH Total*/
-	totalBlocks = (uint32_t)ceil((double)this->curFileSize / (double)this->curSysGranularity); //Always add +1 block to the end unless it divides perfectly
-	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity); //Calculate the number of blocks that will fit in the active available memory space
-	totalPagesNeeded = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory); //Calc the total number of times the active memory work area would be filled up completely
+	totalBlocks         = (uint64_t)ceil((double)this->curFileSize / (double)this->curSysGranularity);           //Always add +1 block to the end unless it divides perfectly
+	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity); //Calc the number of blocks that will fit in the active available memory space
+	totalPagesNeeded    = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory);                //Calc the total number of times the active memory work area would be filled up completely
+	lastBlockClipping   = (uint64_t)ceil(this->curFileSize % this->curSysGranularity);                     //Calc the number of bytes to read in the final block
 	/* Thead Level Calculations for memory Access - This is the process of stitching the file together */
 	if (totalPagesNeeded <= 1) { //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
+		uint64_t q = (uint64_t)((uint64_t)totalBlocks / (uint64_t)this->activeMaxThreads);
+		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads); 
+		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
+		for (int thread = 0; thread < this->activeMaxThreads; thread++){ 
+			FileOffeset threadWork;
+			threadWork.block_number = thread; //Block Number is assigned to the current thread
+			threadWork.processed = FALSE;     //These Blocks have not been processed yet, just generated
+			threadWork.error = 0;             //0 means there were no errors processing the CSV data -> This will get modified by the worker thread. 
+			/* This is the important part and that is getting the correct offsets for each thread */
+		}
+		return 1; 
 	}
 	return 0; 
 }
