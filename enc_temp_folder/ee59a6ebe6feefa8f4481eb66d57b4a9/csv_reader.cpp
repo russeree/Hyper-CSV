@@ -153,8 +153,8 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 	for(int page = 0; page < totalPagesNeeded; page++){
 		/* Thead Level Calculations for memory Access - This is the process of stitching the file together */                                                                        //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
-		uint64_t q = (uint64_t)((uint64_t)totalBlocks / (uint64_t)this->activeMaxThreads);     /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
-		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads); /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
+		uint64_t q = (uint64_t)((uint64_t)totalBlocks / (uint64_t)this->activeMaxThreads);
+		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads);
 		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
 		for (int thread = 0; thread < this->activeMaxThreads; thread++) {       //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
 			FileOffeset threadWork;                                             //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
