@@ -148,20 +148,20 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 		numberOfBlocksPerPage   = this->activeMemUse / this->curSysGranularity; //This is the max number of blocks you can fit into your alocated memory: this does memory byes to blocks conversion
 		remainderOfBlocksNeeded = this->activeMemUse % numberOfBlocksPerPage;   //This is how many blocks must be processed on the final page.
 	}
+	uint64_t q = (uint64_t)((uint64_t)totalBlocksInMemory / (uint64_t)this->activeMaxThreads);     /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
+	uint64_t r = (uint64_t)ceil((uint64_t)totalBlocksInMemory % (uint64_t)this->activeMaxThreads); /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
 	/* Now process the the pages and build the  vector table*/
-	for(int page = 0; page < totalPagesNeeded; page++){                                                           
+	for(uint64_t page = 0; page < totalPagesNeeded; page++){                                                           
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
-		uint64_t q = (uint64_t)((uint64_t)totalBlocksInMemory / (uint64_t)this->activeMaxThreads);     /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
-		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocksInMemory % (uint64_t)this->activeMaxThreads); /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
 		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
-		for (int thread = 0; thread < this->activeMaxThreads; thread++){        //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
+		for (uint64_t thread = 0; thread < this->activeMaxThreads; thread++){        //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
 			FileOffeset threadWork;                                             //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
 			DWORD dwFileMapStart;                                               //This is the data window to where the file mapping will start
 			/* Thread Worker Job Vector Creation */
 			threadWork.block_number = (page * this->activeMaxThreads) + thread; //Block Number is assigned to the current thread
 			threadWork.processed = FALSE;                                       //These Blocks have not been processed yet, just generated
 			threadWork.error = 0;                                               //0 means there were no errors processing the CSV data -> This will get modified by the worker thread. 
-			threadWork.address_start = ((numberOfBlocksPerPage * page) + (thread * q)) * this->curSysGranularity;  //This is kind of a mess but should work okay. 
+			threadWork.address_start = (DWORD)(((numberOfBlocksPerPage * page) + (thread * q)) * this->curSysGranularity);  //This is kind of a mess but should work okay. 
 			threadWork.bytesToMap = q * this->curSysGranularity;
 			if (thread == (this->activeMaxThreads - 1)){
 				threadWork.bytesToMap += r * this->curSysGranularity; //Just make sure to add in the remaining bytes for the last thread worker. 
@@ -172,6 +172,6 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 			}
 		}
 	}
-	this->readOffsets.back().bytesToMap = this->curSysGranularity - (this->curFileSize % this->curSysGranularity);
+	this->readOffsets.back().bytesToMap = (this->curFileSize % (this->curSysGranularity * r));
 	return 0;
 }
