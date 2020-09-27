@@ -27,7 +27,8 @@ public:
 	uint32_t activeMaxThreads = 0;              // Maximum number of reader threads to spawn. This is for large files This defaults to 100% avaible CPU threads. 
 	uint64_t activeMemUse = 0;                  // Active Maximum Memory to use. This defaults to 100% of available phys. 
 	uint64_t fileLines = 0;                     // Number of lines in a file to read. 
-	char* csvData;                              // This is the array with the CSV data
+	char* csvData;                              // This is the array with the CSV data.
+	std::vector<std::thread> threads;           // These are the thread workers
 	std::vector<FileOffset> readOffsets;        // This is the list of read offsets to be queued from the reader. This is affected by system granularity 
 /* Public Access Function List */
 public:
@@ -37,8 +38,9 @@ public:
 	uint8_t preParseFile(fs::path& fpath);      //File PreParser - This does a barrage of checks on a file to ensure it is able to be processes
 	uint8_t csvMemAlocation(void);              //Alocates the memory needed to stoe the CSV contents during parsing
 	uint8_t memMapFile(void);                   //Map the Active File into Memory for the Big Read - USE ONLY WITH SSD - No Parameters Needed
-	uint8_t memMapCopyThread(void);             //This is the thread that is spanwed to copy the file into memory for processing 
+	uint8_t memMapCopyThread(uint64_t taskIndex);       //This is the thread that is spanwed to copy the file into memory for processing 
 	uint8_t calcOffsetsPerThread(void);         //This calculates the offsets needed to read a file from threads
+	uint8_t setupCSVWorkers(void);              //This will create the threads with the correct parameters for parsing the CSV file into memory. 
 private:
 	fs::path curPath;                           //The current Active File Path
 	HANDLE curCsvFile;                          //The cuttent csv FileCreateHandle

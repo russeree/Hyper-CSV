@@ -26,7 +26,8 @@ uint8_t CsvReader::setActiveFile(std::string path) {
 	preParseFile(this->curPath);
 	this->cur_active = TRUE;
 	memMapFile();
-	memMapCopyThread();
+	setupCSVWorkers();
+	memMapCopyThread(1);
 	return 0; //If all goes well then return a 0 pass. 
 }
 
@@ -60,7 +61,7 @@ uint8_t CsvReader::preParseFile(fs::path& fpath){
  * @desc: This is the memory mapper, this is used to map the file on disk into memory for discontigious access
  * @warn: Use only with NVME SSD, Do not use with physical disks - performance will be bad
  **/
-uint8_t CsvReader::memMapFile(void) {
+uint8_t CsvReader::memMapFile(void){
 	if (!this->cur_active) { return 1; } //Failure as there is no active file to map. 
 	// Acutual Memory Mapping Portion of the File Access - Read Only No Writes
 	this->curCsvFile = CreateFileA(
@@ -95,7 +96,7 @@ uint8_t CsvReader::memMapFile(void) {
  * @req: Run as a seperate thread. 
  * @desc: This is the actual read thread to the memory mapped file.
  **/ 
-uint8_t CsvReader::memMapCopyThread(void){
+uint8_t CsvReader::memMapCopyThread(uint64_t taskIndex){
 	LPVOID lpMapAddress;
 	DWORD dwFileMapStart= (270000 / this->curSysGranularity) * this->curSysGranularity;
 	// Now Map the View and Test the Results
@@ -130,7 +131,7 @@ uint8_t CsvReader::csvMemAlocation(void) {
  * @note: This function should be a part of the pre-processing loop. 
  ***/
 uint8_t CsvReader::calcOffsetsPerThread(void){
-	this->activeMemUse = 200000;
+	// this->activeMemUse = 200000; // Testing 
 	uint64_t totalBlocks = 0;             //This is the total number of chunks needed to process an entire file
 	uint64_t totalBlocksInMemory = 0;     //This is the total number of blocks that can be placed into the alocated memory
 	uint64_t totalPagesNeeded = 0;        //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
@@ -153,8 +154,7 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 	/* Now process the the pages and build the  vector table*/
 	for(uint64_t page = 0; page < totalPagesNeeded; page++){                                                           
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
-		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
-		for (uint64_t thread = 0; thread < this->activeMaxThreads; thread++){        //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
+		for (uint64_t thread = 0; thread < this->activeMaxThreads; thread++){   //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
 			FileOffeset threadWork;                                             //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
 			DWORD dwFileMapStart;                                               //This is the data window to where the file mapping will start
 			/* Thread Worker Job Vector Creation */
@@ -172,6 +172,17 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 			}
 		}
 	}
-	this->readOffsets.back().bytesToMap = (this->curFileSize % (this->curSysGranularity * r));
+	this->readOffsets.back().bytesToMap = (this->curFileSize % (this->curSysGranularity * r)); //This is the final thread worker - can be better but it should work just fine. 
+	return 0;
+}
+
+/**
+ * @desc: Create a vector loaded up with thread objects to be used for processing work. 
+ **/
+uint8_t CsvReader::setupCSVWorkers(void){
+	/* Create an array of threads to be worked on */
+	for (uint64_t task = 0; task < this->readOffsets.size(); task++){
+		this->threads.push_back(std::thread(&CsvReader::memMapCopyThread, this, task));
+	}
 	return 0;
 }
