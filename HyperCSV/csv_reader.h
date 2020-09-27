@@ -17,7 +17,7 @@ typedef struct FileOffeset {
 	uint64_t block_number;  // The block number in logical order 
 	DWORD    address_start; // Start Address
 	uint64_t bytesToMap;    // End Address
-	uint8_t  error;         // Threaded Error 
+	uint8_t  error;         // Threaded Error
 	bool processed;         // Processed 
 } FileOffset;
 

@@ -124,53 +124,42 @@ uint8_t CsvReader::csvMemAlocation(void) {
 	return 0;
 }
 
-/***
+/**
  * @desc: This is the function to calculate the number of chunks(based on system granularity to grab per thread) this returns a vector with the offsets and sizes for the entire file
  * this function also serves to ensure that the generation of chunks is safe and legal compared to a user defined function within the scope of the thread worker. 
  * @note: This function should be a part of the pre-processing loop. 
- ***/
+ **/
 uint8_t CsvReader::calcOffsetsPerThread(void){
-	this->activeMemUse = 100000;
-	uint64_t currentViewWindow = 0;       //Init the starting windows @ 0
-	uint64_t totalBlocks = 0;             //This is the total number of chunks needed to process an entire file
-	uint64_t totalBlocksInMemory = 0;     //This is the total number of blocks that can be placed into the alocated memory
-	uint64_t totalPagesNeeded = 0;        //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
-	uint64_t lastBlockClipping = 0;       //This is the total number of bytes left over in the last block, if the file is shorter than the total number of blocks when viewed as bytes 
-	/* This section is for multi-paged files that can not fit into memory */
-	uint64_t numberOfBlocksPerPage = 0;   //This is the block size per page 
-	uint64_t remainderOfBlocksNeeded = 0; //This is the number of blocks on the last page as the file is likely to use an exact multiple of of the ammount of ram alocated to the reading threads 
+	uint64_t currentViewWindow = 0;   //Init the starting windows @ 0
+	uint64_t totalBlocks = 0;         //This is the total number of chunks needed to process an entire file
+	uint64_t totalBlocksInMemory = 0; //This is the total number of blocks that can be placed into the alocated memory
+	uint64_t totalPagesNeeded = 0;    //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
+	uint64_t lastBlockClipping = 0;   //This is the total number of bytes left over in the last block, if the file is shorter than the total number of blocks when viewed as bytes 
 	/* Get the Block Size in Number of Blocks to Read - MATH Total*/
 	totalBlocks         = (uint64_t)ceil((double)this->curFileSize / (double)this->curSysGranularity);           //Always add +1 block to the end unless it divides perfectly
 	totalBlocksInMemory = (uint64_t)floor((double)this->activeMemUse / (double)this->curSysGranularity);         //Calc the number of blocks that will fit in the active available memory space
 	totalPagesNeeded    = (uint64_t)ceil((double)totalBlocks / (double)totalBlocksInMemory);                     //Calc the total number of times the active memory work area would be filled up completely
 	lastBlockClipping   = (uint64_t)ceil(this->curFileSize % this->curSysGranularity);                           //Calc the number of bytes to read in the final block
-	/* If the total pages needed are greater than 1, find the best structure for the memory to be alocated and utilized */
-	if (totalPagesNeeded - 1){                                                //The sub 1 is to ensure the math is done only if there is a condition where you need more than 1 page to parse the entire file
-		numberOfBlocksPerPage = this->activeMemUse / this->curSysGranularity; //This is the max number of blocks you can fit into your alocated memory: this does memory byes to blocks conversion
-		remainderOfBlocksNeeded = this->activeMemUse % numberOfBlocksPerPage; //This is how many blocks must be processed on the final page.
-	}
-	/* Now process the the pages and build the  vector table*/
-	for(int page = 0; page < totalPagesNeeded; page++){
-		/* Thead Level Calculations for memory Access - This is the process of stitching the file together */                                                                        //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
+	/* Thead Level Calculations for memory Access - This is the process of stitching the file together */
+	if (totalPagesNeeded <= 1) {                                                                                 //There is only one page to acount for and all data can fit into memory so just work out the thread level details. 
 		/* Calculate the number of blocks each thread will process issues that araise may be the need to process remainder data when the threads dont evenly map into the memory space 1:1 */
 		uint64_t q = (uint64_t)((uint64_t)totalBlocks / (uint64_t)this->activeMaxThreads);
-		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads);
+		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocks % (uint64_t)this->activeMaxThreads); 
 		/* I think the best way to handle this with regards to file operations would be to add the remaining blocks to one thread? or you could distribute the work out evenly amongst the other threads*/
-		for (int thread = 0; thread < this->activeMaxThreads; thread++) {       //use some of that y=mx+b action here to process all the data  !!!TESTING!!!
-			FileOffeset threadWork;                                             //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
-			DWORD dwFileMapStart;                                               //This is the data window to where the file mapping will start
-			/* Thread Worker Job Vector Creation */
-			threadWork.block_number = page * this->activeMaxThreads + thread;   //Block Number is assigned to the current thread
-			threadWork.processed = FALSE;                                       //These Blocks have not been processed yet, just generated
-			threadWork.error = 0;                                               //0 means there were no errors processing the CSV data -> This will get modified by the worker thread. 
-			threadWork.address_start = ((numberOfBlocksPerPage * page) + (thread * q)) * this->curSysGranularity;  //This is kind of a mess but should work okay. 
+		for (int thread = 0; thread < this->activeMaxThreads; thread++){ //use some of that y=mx+b action here to process all the data 
+			FileOffeset threadWork;           //This will be creaded in order to be added to the vector of work to be done, a queue will not be used becuase of the need for out of order execution - fix in v2.0
+			DWORD dwFileMapStart;             //This is the data window to where the file mapping will start
+			threadWork.block_number = thread; //Block Number is assigned to the current thread
+			threadWork.processed = FALSE;     //These Blocks have not been processed yet, just generated
+			threadWork.error = 0;             //0 means there were no errors processing the CSV data -> This will get modified by the worker thread. 
+			threadWork.address_start  = (thread * q) * this->curSysGranularity;
 			threadWork.bytesToMap = q * this->curSysGranularity;
-			if (thread == (this->activeMaxThreads - 1)){
+			if (thread == this->activeMaxThreads){
 				threadWork.bytesToMap += r * this->curSysGranularity; //Just make sure to add in the remaining bytes for the last thread worker. 
 			}
-			/* Push out the workers Job */
 			this->readOffsets.push_back(threadWork); //Added your payload to the final vector!
 		}
+		return 1; 
 	}
-	return 0;
+	return 0; 
 }
