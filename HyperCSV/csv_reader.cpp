@@ -27,7 +27,7 @@ uint8_t CsvReader::setActiveFile(std::string path) {
 	this->cur_active = TRUE;
 	memMapFile();
 	setupCSVWorkers();
-	memMapCopyThread(1);
+	memMapCopyThread(0);
 	return 0; //If all goes well then return a 0 pass. 
 }
 
@@ -62,7 +62,9 @@ uint8_t CsvReader::preParseFile(fs::path& fpath){
  * @warn: Use only with NVME SSD, Do not use with physical disks - performance will be bad
  **/
 uint8_t CsvReader::memMapFile(void){
-	if (!this->cur_active) { return 1; } //Failure as there is no active file to map. 
+	if (!this->cur_active){ 
+		return 1; 
+	} //Failure as there is no active file to map. 
 	// Acutual Memory Mapping Portion of the File Access - Read Only No Writes
 	this->curCsvFile = CreateFileA(
 		this->curPath.string().c_str(), //The current path
@@ -98,22 +100,12 @@ uint8_t CsvReader::memMapFile(void){
  **/ 
 uint8_t CsvReader::memMapCopyThread(uint64_t taskIndex){
 	LPVOID lpMapAddress;
-	DWORD dwFileMapStart= (270000 / this->curSysGranularity) * this->curSysGranularity;
-	// Now Map the View and Test the Results
-	lpMapAddress = MapViewOfFile(
-		this->curCsvMapFile,  // handle to mapping object
-		FILE_MAP_READ,        // read/write
-		0,                    // high-order 32 bits of file offset
-		this->readOffsets[317].address_start, // low-order 32 bits of file offset
-		this->readOffsets[317].bytesToMap     // number of bytes to map
-	);
-	if (lpMapAddress == NULL){ return 1; }
+	lpMapAddress = MapViewOfFile(this->curCsvMapFile, FILE_MAP_READ, 0, this->readOffsets[taskIndex].address_start, this->readOffsets[taskIndex].bytesToMap); //Map the view window
+	if (lpMapAddress == NULL){ return 1; } //Retun 1 if the function fails to execute correctly
+	/* FILE IS NOW MAPPED READ FROM IT */
 	char* pData;
-	pData = (char*)lpMapAddress + 50000;
-	// Extract the data, an int. Cast the pointer pData from a "pointer
-	// to char" to a "pointer to int" to get the whole thing
-	char iData;
-	iData = *(char*)pData;
+	pData = (char*)lpMapAddress;
+	memcpy(this->csvData, pData, this->readOffsets[taskIndex].bytesToMap);
 	return 0;
 }
 
@@ -173,6 +165,16 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 		}
 	}
 	this->readOffsets.back().bytesToMap = (this->curFileSize % (this->curSysGranularity * r)); //This is the final thread worker - can be better but it should work just fine. 
+	return 0;
+}
+
+/**
+ * @desc: this is the portion of the application where the thread functions are created/managed/completed/destroyed. This also ensure that there are no threads that are allowed to be created beyond the hardware concurrency of the CPU being used
+ * @note: once this function is called it takes all active paramaters and begins processing data. It will consume vector elements of threads until there are no more threads to consume. 
+ * @note: determine what happens the threads that are created in a vector? once the thread finishes is does the element get poped from the vector? LEARN MORE STUFF
+ **/
+uint8_t csvThreadPool(void){
+
 	return 0;
 }
 

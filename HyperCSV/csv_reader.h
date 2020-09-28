@@ -33,6 +33,7 @@ public:
 /* Public Access Function List */
 public:
 	CsvReader(void);
+	uint8_t csvThreadPool(void);                //This manages the working threads and ensure that there are not more threads than the available hardware conncurrency threads. 
 	uint8_t setActiveFile(std::string path);    //Sets the Active File to be Processes 
 	uint8_t setMaxMemoryPercent(float percent); //Sets the Maximum Memory Usage as a percent of Available PHYS
 	uint8_t preParseFile(fs::path& fpath);      //File PreParser - This does a barrage of checks on a file to ensure it is able to be processes
