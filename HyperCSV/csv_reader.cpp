@@ -15,7 +15,6 @@
 	this->activeMaxThreads = std::thread::hardware_concurrency();
 	this->activeMemUse = statex.ullAvailPhys;
 }
-
 /* Sets up the Parser with and active file */
 uint8_t CsvReader::setActiveFile(std::string path) {
 	this->curPath = fs::u8path(path); //Create the path object for the target 
@@ -30,7 +29,6 @@ uint8_t CsvReader::setActiveFile(std::string path) {
 	memMapCopyThread(0);
 	return 0; //If all goes well then return a 0 pass. 
 }
-
 /* Sets a max memory override based on a percentage of available memory: consumes a float < 100 */
 uint8_t CsvReader::setMaxMemoryPercent(float percent) {
 	if (0 < percent && percent < 100) { //Check to make sure the users float percent is within a valid range of percents 
@@ -41,7 +39,6 @@ uint8_t CsvReader::setMaxMemoryPercent(float percent) {
 	}
 	return 0;
 }
-
 /* Pre-Parses a file for the */
 uint8_t CsvReader::preParseFile(fs::path& fpath){
 	/* Get the active file size */
@@ -56,7 +53,6 @@ uint8_t CsvReader::preParseFile(fs::path& fpath){
 	/* !!!STUB!!! Determin the size of each page for the individual threads */
 	return 0;
 }
-
 /**
  * @desc: This is the memory mapper, this is used to map the file on disk into memory for discontigious access
  * @warn: Use only with NVME SSD, Do not use with physical disks - performance will be bad
@@ -93,7 +89,6 @@ uint8_t CsvReader::memMapFile(void){
 	csvMemAlocation();
 	return 0;
 }
-
 /**
  * @req: Run as a seperate thread. 
  * @desc: This is the actual read thread to the memory mapped file.
@@ -108,7 +103,6 @@ uint8_t CsvReader::memMapCopyThread(uint64_t taskIndex){
 	memcpy(this->csvData, pData, this->readOffsets[taskIndex].bytesToMap);
 	return 0;
 }
-
  /**
   * @desc: Calculates and Alocates the Memory neccesary to parse the CSV files
   **/
@@ -116,7 +110,6 @@ uint8_t CsvReader::csvMemAlocation(void) {
 	this->csvData = (char*)malloc(this->curPageSize);
 	return 0;
 }
-
 /***
  * @desc: This is the function to calculate the number of chunks(based on system granularity to grab per thread) this returns a vector with the offsets and sizes for the entire file
  * this function also serves to ensure that the generation of chunks is safe and legal compared to a user defined function within the scope of the thread worker. 
@@ -167,7 +160,6 @@ uint8_t CsvReader::calcOffsetsPerThread(void){
 	this->readOffsets.back().bytesToMap = (this->curFileSize % (this->curSysGranularity * r)); //This is the final thread worker - can be better but it should work just fine. 
 	return 0;
 }
-
 /**
  * @desc: this is the portion of the application where the thread functions are created/managed/completed/destroyed. This also ensure that there are no threads that are allowed to be created beyond the hardware concurrency of the CPU being used
  * @note: once this function is called it takes all active paramaters and begins processing data. It will consume vector elements of threads until there are no more threads to consume. 
@@ -177,7 +169,6 @@ uint8_t csvThreadPool(void){
 
 	return 0;
 }
-
 /**
  * @desc: Create a vector loaded up with thread objects to be used for processing work. 
  **/
