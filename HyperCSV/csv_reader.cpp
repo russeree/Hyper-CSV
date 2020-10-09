@@ -135,26 +135,20 @@ uint8_t CsvReader::csvMemAlocation(void) {
  ***/
 uint8_t CsvReader::calcOffsetsPerThread(void){
 	//this->activeMemUse = 200000; // Testing 
-	uint64_t partialBytesNeeded  = 0; //When converted to blocks how many bytes are left over to process 
-	uint64_t fullBlocksNeeded    = 0; //This is the total number of chunks needed to process an entire file
-	uint64_t totalBlocksInMemory = 0; //This is the total number of blocks that can be placed into the alocated memory
-	uint64_t totalPagesNeeded    = 0; //This is the total number of pages needed to complete the job, A.K.A the total number of times your active memory would need to be filled to 100%
-	uint64_t lastBlockClipping   = 0; //This is the total number of bytes left over in the last block, if the file is shorter than the total number of blocks when viewed as bytes 
+	uint64_t partialBytesNeeded  = (uint64_t)(this->curFileSize % this->curSysGranularity);     //This is the number of left over bytes that need to be oricessed 
+	uint64_t fullBlocksNeeded    = (uint64_t)(this->curFileSize / this->curSysGranularity);     //Always add +1 block to the end unless it divides perfectly
+	uint64_t totalBlocksInMemory = (uint64_t)(this->activeMemUse / this->curSysGranularity);    //Calc the number of blocks that will fit in the active available memory space 
+	uint64_t totalPagesNeeded    = (uint64_t)(fullBlocksNeeded / totalBlocksInMemory);          //Calc the total number of times the active memory work area would be filled up completely) 0 = 1 total block needed
 	/* This section is for multi-paged files that can not fit into memory */
-	uint64_t numberOfBlocksPerPage   = 0;   //This is the block size per page 
-	uint64_t remainderOfBlocksNeeded = 0;   //This is the number of blocks on the last page as the file is likely to use an exact multiple of of the ammount of ram alocated to the reading threads 
-	/* Get the Block Size in Number of Blocks to Read - MATH Total*/
-	fullBlocksNeeded    = (uint64_t)(this->curFileSize / this->curSysGranularity);     //Always add +1 block to the end unless it divides perfectly
-	partialBytesNeeded  = (uint64_t)(this->curFileSize % this->curSysGranularity);     //This is the number of left over bytes that need to be oricessed 
-	totalBlocksInMemory = (uint64_t)(this->activeMemUse / this->curSysGranularity);    //Calc the number of blocks that will fit in the active available memory space
-	totalPagesNeeded    = (uint64_t)(fullBlocksNeeded / totalBlocksInMemory);          //Calc the total number of times the active memory work area would be filled up completely)
+	uint64_t numberOfBlocksPerPage   = 0; //This is the block size per page 
+	uint64_t remainderOfBlocksNeeded = 0; //This is the number of blocks on the last page as the file is likely to use an exact multiple of of the ammount of ram alocated to the reading threads 
 	/* If the total pages needed are greater than 1, find the best structure for the memory to be alocated and utilized */
-	uint64_t q = (uint64_t)((uint64_t)fullBlocksNeeded / (uint64_t)this->activeMaxThreads);       /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
-	uint64_t r = (uint64_t)ceil((uint64_t)fullBlocksNeeded % (uint64_t)this->activeMaxThreads);   /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
+	uint64_t q = (uint64_t)((uint64_t)fullBlocksNeeded / (uint64_t)this->activeMaxThreads);       /*!!!FIXME!!! Need to determine e number to divide when you have multiple pages*/
+	uint64_t r = (uint64_t)ceil((uint64_t)fullBlocksNeeded % (uint64_t)this->activeMaxThreads);   /*!!!FIXME!!! Need to determine ththe number to divide when you have multiple pages*/
 	// Modify Q and R values if you have more than one page becuase of the way memory is going to be managed
-	if (totalPagesNeeded - 1){                                                  //The sub 1 is to ensure the math is done only if there is a condition where you need more than 1 page to parse the entire file
-		numberOfBlocksPerPage   = this->activeMemUse / this->curSysGranularity; //This is the max number of blocks you can fit into your alocated memory: this does memory byes to blocks conversion
-		remainderOfBlocksNeeded = this->activeMemUse % numberOfBlocksPerPage;   //This is how many blocks must be processed on the final page.
+	if (totalPagesNeeded){                                                       //The sub 1 is to ensure the math is done only if there is a condition where you need more than 1 page to parse the entire file
+		numberOfBlocksPerPage   = this->activeMemUse / this->curSysGranularity;  //This is the max number of blocks you can fit into your alocated memory: this does memory byes to blocks conversion
+		remainderOfBlocksNeeded = this->activeMemUse % numberOfBlocksPerPage;    //This is how many blocks must be processed on the final page.
 		uint64_t q = (uint64_t)((uint64_t)totalBlocksInMemory / (uint64_t)this->activeMaxThreads);     /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
 		uint64_t r = (uint64_t)ceil((uint64_t)totalBlocksInMemory % (uint64_t)this->activeMaxThreads); /*!!!FIXME!!! Need to determine the number to divide when you have multiple pages*/
 	}
